@@ -1,11 +1,11 @@
 from typing import List
 from datasets import load_dataset
 import gensim.downloader as api
-
+from torch import LongTensor
 
 # DATASET
 dataset = load_dataset("conllpp")
-train = dataset["train"]
+train = dataset["train"] #subsetting the data 
 
 # inspect the dataset
 train["tokens"][:1]
@@ -29,15 +29,26 @@ embedding_layer, vocab = gensim_to_torch_embedding(model)
 # PREPARING A BATCH
 
 
-def tokens_to_idx(tokens, vocab=model.key_to_index):
+def tokens_to_idx(tokens: List[List[str]], vocab=model.key_to_index: #: dict) -> List[List[int]]:
     """
+    The function inputs a List[List[str]] of tokens and a dictionary including 
+    the tokens as well as their position within the word embedding.
+
+    The function returns a List[List[int]], which indicates the index of the token.
+    The get() method returns the value of the item with the specified key.
+
+    What does this vocab["UNK"] do? 
+
+    Lowercase allows comparison between the word embeddings and the current dictionary. 
+
+
+    Fra Kenneth: 
     Ideas to understand this function:
     - Write documentation for this function including type hints for each arguement and return statement
     - What does the .get method do?
     - Why lowercase?
     """
     return [vocab.get(t.lower(), vocab["UNK"]) for t in tokens]
-
 
 # sample batch of 10 sentences
 batch_tokens = train["tokens"][:10]
@@ -51,8 +62,8 @@ batch_max_len = max([len(s) for s in batch_tok_idx])
 # prepare a numpy array with the data, initializing the data with 'PAD'
 # and all labels with -1; initializing labels to -1 differentiates tokens
 # with tags from 'PAD' tokens
-batch_input = vocab["PAD"] * np.ones((batch_size, batch_max_len))
-batch_labels = -1 * np.ones((batch_size, batch_max_len))
+batch_input = vocab["PAD"] * np.ones((batch_size, batch_max_len)) #create 400001 arrays of 40 (max length)* 10 (batch size)
+batch_labels = -1 * np.ones((batch_size, batch_max_len)) #create labels that match
 
 # copy the data to the numpy array
 for i in range(batch_size):
@@ -67,13 +78,13 @@ for i in range(batch_size):
 # since all data are indices, we convert them to torch LongTensors
 batch_input, batch_labels = torch.LongTensor(batch_input), torch.LongTensor(
     batch_labels
-)
+) #converts to integer
 
 # CREATE MODEL
 from LSTM import RNN
 
 model = RNN(
-    embedding_layer=embedding_layer, num_classes=num_classes + 1, hidden_dim_size=256
+    embedding_layer=embedding_layer, output_dim=num_classes + 1, hidden_dim_size=256
 )
 
 # FORWARD PASS
