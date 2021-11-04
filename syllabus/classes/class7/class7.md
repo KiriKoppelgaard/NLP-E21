@@ -21,7 +21,7 @@ You likely won't have the time to finish this in class, but that is also not the
     - CONVERTING EMBEDDING
     - PREPARING A BATCH
     - CREATING MODEL
-    - FORWARD PASS
+    - FORWARD PASS 
 
 
 
