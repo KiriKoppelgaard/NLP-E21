@@ -1,7 +1,12 @@
-from typing import List
+import numpy as np
+import torch
+
 from datasets import load_dataset
 import gensim.downloader as api
-from torch import LongTensor
+
+from util import batch
+from LSTM import RNN
+from embedding import gensim_to_torch_embedding
 
 # DATASET
 dataset = load_dataset("conllpp")
@@ -14,19 +19,21 @@ num_classes = train.features["ner_tags"].feature.num_classes
 
 
 # CONVERTING EMBEDDINGS
-import numpy as np
-
-import torch
-
 model = api.load("glove-wiki-gigaword-50")
-
-from embedding import gensim_to_torch_embedding
 
 # convert gensim word embedding to torch word embedding
 embedding_layer, vocab = gensim_to_torch_embedding(model)
 
 
 # PREPARING A BATCH
+
+# shuffle dataset
+shuffled_train = dataset["train"].shuffle(seed=1)
+
+# batch it using a utility function (don't spend time on the function, but make sure you understand the output)
+batch_size = 10
+batches_tokens = batch(shuffled_train["tokens"], batch_size)
+batches_tags = batch(shuffled_train["ner_tags"], batch_size)
 
 
 def tokens_to_idx(tokens: List[List[str]], vocab=model.key_to_index: #: dict) -> List[List[int]]:
@@ -50,9 +57,10 @@ def tokens_to_idx(tokens: List[List[str]], vocab=model.key_to_index: #: dict) ->
     """
     return [vocab.get(t.lower(), vocab["UNK"]) for t in tokens]
 
-# sample batch of 10 sentences
-batch_tokens = train["tokens"][:10]
-batch_tags = train["ner_tags"][:10]
+
+# sample using only the first batch
+batch_tokens = next(batches_tokens)
+batch_tags = next(batches_tags)
 batch_tok_idx = [tokens_to_idx(sent) for sent in batch_tokens]
 batch_size = len(batch_tokens)
 
@@ -75,14 +83,12 @@ for i in range(batch_size):
     batch_labels[i][:size] = tags
 
 
-# since all data are indices, we convert them to torch LongTensors
+# since all data are indices, we convert them to torch LongTensors (integers)
 batch_input, batch_labels = torch.LongTensor(batch_input), torch.LongTensor(
     batch_labels
 ) #converts to integer
 
 # CREATE MODEL
-from LSTM import RNN
-
 model = RNN(
     embedding_layer=embedding_layer, output_dim=num_classes + 1, hidden_dim_size=256
 )
